@@ -1,0 +1,37 @@
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        docker pull europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:latest || exit 0
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - -t
+      - europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:$SHORT_SHA
+      - -t
+      - europe-west2.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:latest
+      - .
+      - --cache-from
+      - europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:latest
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      ['push', 'europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:$SHORT_SHA']
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - run
+      - deploy
+      - swift-service
+      - --image=europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:$SHORT_SHA
+      - --port=8080
+      - --region=europe-west2
+      - --memory=512Mi
+      - --platform=managed
+      - --allow-unauthenticated
+      - --min-instances=0
+      - --max-instances=5
+images:
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:$SHORT_SHA'
+  - 'europe-west2-docker.pkg.dev/$PROJECT_ID/vapor-gcp-test/server:latest'
+timeout: 1800s
